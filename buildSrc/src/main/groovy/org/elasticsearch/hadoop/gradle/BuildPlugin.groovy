@@ -2,10 +2,10 @@ package org.elasticsearch.hadoop.gradle
 
 import org.elasticsearch.gradle.DependenciesInfoPlugin
 import org.elasticsearch.gradle.info.BuildParams
-import org.elasticsearch.gradle.precommit.DependencyLicensesTask
-import org.elasticsearch.gradle.precommit.LicenseHeadersTask
-import org.elasticsearch.gradle.precommit.UpdateShasTask
-import org.elasticsearch.gradle.testclusters.RestTestRunnerTask
+//import org.elasticsearch.gradle.precommit.DependencyLicensesTask
+//import org.elasticsearch.gradle.precommit.LicenseHeadersTask
+//import org.elasticsearch.gradle.precommit.UpdateShasTask
+//import org.elasticsearch.gradle.testclusters.RestTestRunnerTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -476,83 +476,83 @@ class BuildPlugin implements Plugin<Project>  {
      * @param project to be configured
      */
     private static void configureIntegrationTestTask(Project project) {
-        if (project != project.rootProject) {
-            TaskProvider<Task> itestJar = project.tasks.register('itestJar', Jar) { Jar itestJar ->
-                itestJar.dependsOn(project.tasks.getByName('jar'))
-                itestJar.getArchiveClassifier().set('testing')
-
-                // Add this project's classes to the testing uber-jar
-                itestJar.from(project.sourceSets.main.output)
-                itestJar.from(project.sourceSets.test.output)
-                itestJar.from(project.sourceSets.itest.output)
-            }
-
-            Test integrationTest = project.tasks.create('integrationTest', RestTestRunnerTask.class)
-            integrationTest.dependsOn(itestJar)
-
-            itestJar.configure { Jar jar ->
-                integrationTest.doFirst {
-                    integrationTest.systemProperty("es.hadoop.job.jar", jar.getArchiveFile().get().asFile.absolutePath)
-                }
-            }
-
-            integrationTest.testClassesDirs = project.sourceSets.itest.output.classesDirs
-            integrationTest.classpath = project.sourceSets.itest.runtimeClasspath
-            integrationTest.excludes = ["**/Abstract*.class"]
-
-            integrationTest.ignoreFailures = false
-
-            integrationTest.executable = "${project.ext.get('runtimeJavaHome')}/bin/java"
-            integrationTest.minHeapSize = "256m"
-            integrationTest.maxHeapSize = "2g"
-
-            integrationTest.testLogging {
-                displayGranularity 0
-                events "started", "failed" //, "standardOut", "standardError"
-                exceptionFormat "full"
-                showCauses true
-                showExceptions true
-                showStackTraces true
-                stackTraceFilters "groovy"
-                minGranularity 2
-                maxGranularity 2
-            }
-
-            integrationTest.reports.html.enabled = false
-
-            // Only add cluster settings if it's not the root project
-            project.logger.info "Configuring ${project.name} integrationTest task to use ES Fixture"
-            // Create the cluster fixture around the integration test.
-            // There's probably a more elegant way to do this in Gradle
-            project.plugins.apply("es.hadoop.cluster")
-        }
+//        if (project != project.rootProject) {
+//            TaskProvider<Task> itestJar = project.tasks.register('itestJar', Jar) { Jar itestJar ->
+//                itestJar.dependsOn(project.tasks.getByName('jar'))
+//                itestJar.getArchiveClassifier().set('testing')
+//
+//                // Add this project's classes to the testing uber-jar
+//                itestJar.from(project.sourceSets.main.output)
+//                itestJar.from(project.sourceSets.test.output)
+//                itestJar.from(project.sourceSets.itest.output)
+//            }
+//
+//            Test integrationTest = project.tasks.create('integrationTest', RestTestRunnerTask.class)
+//            integrationTest.dependsOn(itestJar)
+//
+//            itestJar.configure { Jar jar ->
+//                integrationTest.doFirst {
+//                    integrationTest.systemProperty("es.hadoop.job.jar", jar.getArchiveFile().get().asFile.absolutePath)
+//                }
+//            }
+//
+//            integrationTest.testClassesDirs = project.sourceSets.itest.output.classesDirs
+//            integrationTest.classpath = project.sourceSets.itest.runtimeClasspath
+//            integrationTest.excludes = ["**/Abstract*.class"]
+//
+//            integrationTest.ignoreFailures = false
+//
+//            integrationTest.executable = "${project.ext.get('runtimeJavaHome')}/bin/java"
+//            integrationTest.minHeapSize = "256m"
+//            integrationTest.maxHeapSize = "2g"
+//
+//            integrationTest.testLogging {
+//                displayGranularity 0
+//                events "started", "failed" //, "standardOut", "standardError"
+//                exceptionFormat "full"
+//                showCauses true
+//                showExceptions true
+//                showStackTraces true
+//                stackTraceFilters "groovy"
+//                minGranularity 2
+//                maxGranularity 2
+//            }
+//
+//            integrationTest.reports.html.enabled = false
+//
+//            // Only add cluster settings if it's not the root project
+//            project.logger.info "Configuring ${project.name} integrationTest task to use ES Fixture"
+//            // Create the cluster fixture around the integration test.
+//            // There's probably a more elegant way to do this in Gradle
+//            project.plugins.apply("es.hadoop.cluster")
+//        }
     }
 
     private static void configurePrecommit(Project project) {
-        List<Object> precommitTasks = []
-        LicenseHeadersTask licenseHeaders = project.tasks.create('licenseHeaders', LicenseHeadersTask.class)
-        precommitTasks.add(licenseHeaders)
-
-        if (!project.path.startsWith(":qa")) {
-            TaskProvider<DependencyLicensesTask> dependencyLicenses = project.tasks.register('dependencyLicenses', DependencyLicensesTask.class) {
-                dependencies = project.configurations.runtimeClasspath.fileCollection {
-                    !(it instanceof ProjectDependency)
-                }
-                mapping from: /hadoop-.*/, to: 'hadoop'
-                mapping from: /hive-.*/, to: 'hive'
-                mapping from: /jackson-.*/, to: 'jackson'
-                mapping from: /spark-.*/, to: 'spark'
-                mapping from: /scala-.*/, to: 'scala'
-            }
-            // we also create the updateShas helper task that is associated with dependencyLicenses
-            UpdateShasTask updateShas = project.tasks.create('updateShas', UpdateShasTask.class)
-            updateShas.parentTask = dependencyLicenses
-
-            precommitTasks.add(dependencyLicenses)
-        }
-        Task precommit = project.tasks.create('precommit')
-        precommit.dependsOn(precommitTasks)
-        project.tasks.getByName('check').dependsOn(precommit)
+//        List<Object> precommitTasks = []
+//        LicenseHeadersTask licenseHeaders = project.tasks.create('licenseHeaders', LicenseHeadersTask.class)
+//        precommitTasks.add(licenseHeaders)
+//
+//        if (!project.path.startsWith(":qa")) {
+//            TaskProvider<DependencyLicensesTask> dependencyLicenses = project.tasks.register('dependencyLicenses', DependencyLicensesTask.class) {
+//                dependencies = project.configurations.runtimeClasspath.fileCollection {
+//                    !(it instanceof ProjectDependency)
+//                }
+//                mapping from: /hadoop-.*/, to: 'hadoop'
+//                mapping from: /hive-.*/, to: 'hive'
+//                mapping from: /jackson-.*/, to: 'jackson'
+//                mapping from: /spark-.*/, to: 'spark'
+//                mapping from: /scala-.*/, to: 'scala'
+//            }
+//            // we also create the updateShas helper task that is associated with dependencyLicenses
+//            UpdateShasTask updateShas = project.tasks.create('updateShas', UpdateShasTask.class)
+//            updateShas.parentTask = dependencyLicenses
+//
+//            precommitTasks.add(dependencyLicenses)
+//        }
+//        Task precommit = project.tasks.create('precommit')
+//        precommit.dependsOn(precommitTasks)
+//        project.tasks.getByName('check').dependsOn(precommit)
     }
 
     private static void configureDependenciesInfo(Project project) {
